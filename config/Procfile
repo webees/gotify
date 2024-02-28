@@ -1,0 +1,3 @@
+gotify: cd /app && ./gotify-app
+caddy: /caddy.sh
+crontab: supercronic /crontab
