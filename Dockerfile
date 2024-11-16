@@ -7,9 +7,7 @@ ARG SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.
 
 ENV TZ="Asia/Shanghai" \
 
-    CADDY_DOMAIN= \
-    CADDY_PORT=80 \
-    GOTIFY_SERVER_PORT=8080 \
+    DOMAIN_NAME= \
 
     OVERMIND_CAN_DIE=caddy,crontab \
     OVERMIND_PROCFILE=/Procfile \
@@ -29,8 +27,8 @@ ENV TZ="Asia/Shanghai" \
 
 COPY config/crontab \
      config/Procfile \
+     config/Caddyfile \
      scripts/restic.sh \
-     scripts/caddy.sh \
      /
 
 RUN apt update && apt install -y --no-install-recommends \
@@ -65,7 +63,6 @@ RUN apt update && apt install -y --no-install-recommends \
 
         && chmod +x /usr/local/bin/supercronic \
         && chmod +x /usr/local/bin/overmind \
-        && chmod +x /restic.sh \
-        && chmod +x /caddy.sh
+        && chmod +x /restic.sh
 
 ENTRYPOINT ["overmind", "start"]
