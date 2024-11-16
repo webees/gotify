@@ -1,4 +1,4 @@
-FROM ghcr.io/gotify/server:2.5.0
+FROM ghcr.io/gotify/server:2.6
 
 WORKDIR /app
 
