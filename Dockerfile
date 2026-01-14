@@ -34,8 +34,7 @@ RUN set -eux \
     # ─ Caddy repository ─
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
-    && . /etc/os-release \
-    && echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/${ID} ${VERSION_CODENAME} main" \
+    && echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian bookworm main" \
     > /etc/apt/sources.list.d/caddy-stable.list \
     # ─ Install packages ─
     && apt update \
