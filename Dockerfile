@@ -34,8 +34,9 @@ RUN set -eux \
     # ─ Caddy repository ─
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
-    && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
-    | tee /etc/apt/sources.list.d/caddy-stable.list \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/${ID} ${VERSION_CODENAME} main" \
+    > /etc/apt/sources.list.d/caddy-stable.list \
     # ─ Install packages ─
     && apt update \
     && apt install -y --no-install-recommends \
