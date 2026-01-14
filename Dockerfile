@@ -24,33 +24,41 @@ COPY config/crontab \
     scripts/restic.sh \
     /
 
-# ── Step 1: APT prerequisites ─────────────────────────────────────────────────
+# ── APT packages ──────────────────────────────────────────────────────────────
 RUN apt update && apt install -y --no-install-recommends \
-    apt-transport-https ca-certificates curl gnupg sudo \
-    debian-keyring debian-archive-keyring
-
-# ── Step 2: Caddy repository ──────────────────────────────────────────────────
-RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    debian-keyring \
+    debian-archive-keyring \
+    # Add Caddy repository
+    && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main" \
-    > /etc/apt/sources.list.d/caddy-stable.list
+    > /etc/apt/sources.list.d/caddy-stable.list \
+    # Install packages
+    && apt update && apt install -y --no-install-recommends \
+    caddy \
+    restic \
+    openssl \
+    tzdata \
+    ntpsec-ntpdate \
+    iptables \
+    iputils-ping \
+    tmux \
+    msmtp \
+    bsd-mailx \
+    # Mail symlinks
+    && ln -sf /usr/bin/msmtp /usr/bin/sendmail \
+    && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
+    # Cleanup
+    && apt -y autoremove \
+    && rm -rf /var/lib/apt/lists/*
 
-# ── Step 3: Install packages ──────────────────────────────────────────────────
-RUN apt update && apt install -y --no-install-recommends \
-    caddy restic \
-    openssl tzdata ntpsec-ntpdate \
-    iptables iputils-ping tmux \
-    msmtp bsd-mailx
-
-# ── Step 4: Binary tools ──────────────────────────────────────────────────────
+# ── Binary tools ──────────────────────────────────────────────────────────────
 RUN curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
     && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
     && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh
-
-# ── Step 5: Mail symlinks & cleanup ───────────────────────────────────────────
-RUN ln -sf /usr/bin/msmtp /usr/bin/sendmail \
-    && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
-    && apt -y autoremove \
-    && rm -rf /var/lib/apt/lists/*
 
 CMD ["overmind", "start"]
