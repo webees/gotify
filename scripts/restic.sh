@@ -1,116 +1,104 @@
 #!/bin/bash
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║ Restic Backup - Gotify                                                    ║
+# ║ Usage: /restic.sh {backup|restore <id>|snapshots}                         ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
 
-if [ -z "$RESTIC_PASSWORD" ]; then
-  exit 1
-fi
+set -o pipefail
 
-if [ -n "$SMTP_TO" ]; then
-cat << EOF > /etc/msmtprc
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ Configuration                                                             │
+# └───────────────────────────────────────────────────────────────────────────┘
+APP_NAME="Gotify"
+DATA="/app/data"
+LOG_DIR="/var/log/restic"
+LOG="$LOG_DIR/$(date +%Y%m%d_%H%M%S).log"
+mkdir -p "$LOG_DIR"
+
+# ANSI colors
+R="\x1b[31;01m" G="\x1b[32;01m" Y="\x1b[33;01m" B="\x1b[34;01m" X="\x1b[0m"
+
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ Utilities                                                                 │
+# └───────────────────────────────────────────────────────────────────────────┘
+
+log() { "$@" 2>&1 | tee -a "$LOG"; }
+
+mail() {
+    [ -z "${SMTP_TO:-}" ] && return
+    sed 's/\x1b\[[0-9;]*m//g' "$LOG" | command mail -s "[$APP_NAME] $1" "$SMTP_TO"
+}
+
+run() {
+    log echo -en "${B}$2${X} "
+    local out
+    out=$(eval "$1" 2>&1)
+    if [ $? -eq 0 ]; then
+        log echo -e "${G}✓${X}"
+        return 0
+    fi
+    log echo -e "${R}✗${X}"
+    log echo "$out"
+    mail "$2"
+    exit 2
+}
+
+initMail() {
+    [ -z "${SMTP_TO:-}" ] && return
+    [ -z "${SMTP_HOST:-}" ] && return
+
+    cat > /etc/msmtprc << EOF
 defaults
 auth on
 tls on
 tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile /var/log/msmtp.log
-
 account default
 host $SMTP_HOST
-port $SMTP_PORT
+port ${SMTP_PORT:-587}
 from $SMTP_FROM
 user $SMTP_USERNAME
 password $SMTP_PASSWORD
 EOF
-fi
-
-# catch the error in case first pipe command fails (but second succeeds)
-set -o pipefail
-# turn on traces, useful while debugging but commented out by default
-# set -o xtrace
-
-EMAIL_SUBJECT_PREFIX="[Restic]"
-LOG="/var/log/restic/$(date +\%Y\%m\%d_\%H\%M\%S).log"
-
-# create log dir
-mkdir -p /var/log/restic/
-
-# e-mail notification
-function notify() {
-  if [ -n "$SMTP_TO" ]; then
-      sed -e 's/\x1b\[[0-9;]*m//g' "${LOG}" | mail -s "${EMAIL_SUBJECT_PREFIX} ${1}" ${SMTP_TO}
-  fi
 }
 
-function log() {
-    "$@" 2>&1 | tee -a "$LOG"
-}
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ Commands                                                                  │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-function run_silently() {
-    "$@" >/dev/null 2>&1
-}
+cmdBackup() {
+    restic unlock 2>/dev/null || true
 
-# ###############################################################################
-# colorized echo helpers                                                        #
-# taken from: https://github.com/atomantic/dotfiles/blob/master/lib_sh/echos.sh #
-# ###############################################################################
-
-ESC_SEQ="\x1b["
-COL_RED=$ESC_SEQ"31;01m"
-COL_BLUE=$ESC_SEQ"34;01m"
-COL_GREEN=$ESC_SEQ"32;01m"
-COL_YELLOW=$ESC_SEQ"33;01m"
-COL_RESET=$ESC_SEQ"39;49;00m"
-
-function ok() {
-    log echo -e "$COL_GREEN[ok]$COL_RESET $1"
-}
-
-function running() {
-    log echo -en "$COL_BLUE ⇒ $COL_RESET $1..."
-}
-
-function warn() {
-    log echo -e "$COL_YELLOW[warning]$COL_RESET $1"
-}
-
-function error() {
-    log echo -e "$COL_RED[error]$COL_RESET $1"
-    log echo -e "$2"
-}
-
-function notify_and_exit_on_error() {
-    output=$(eval $1 2>&1)
-
-    if [ $? -ne 0 ]; then
-        error "$2" "$output"
-        notify "$2"
-        exit 2
+    if ! restic cat config >/dev/null 2>&1; then
+        log echo -e "${Y}Repo not initialized${X}"
+        run "restic init" "Repo init"
     fi
+
+    run "restic backup --verbose '$DATA'" "Restic backup"
+    run "restic check" "Restic check"
+    run "restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --keep-yearly 3 --prune" "Snapshot prune"
+
+    find "$LOG_DIR" -name "*.log" -type f -mmin +600 -delete
+
+    log echo -e "${G}Backup complete ✨${X}"
 }
 
-# ##############
-# backup steps #
-# ##############
-restic unlock
+cmdRestore() {
+    [ -z "${1:-}" ] && { echo "Usage: $0 restore <id>"; exit 1; }
+    run "restic restore '$1' --target /" "Restore $1"
+}
 
-running "checking restic config"
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ Main                                                                      │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-run_silently restic cat config
+[ -z "${RESTIC_PASSWORD:-}" ] && { echo "Missing RESTIC_PASSWORD"; exit 1; }
 
-if [ $? -ne 0 ]; then
-    warn "restic repo either not initialized or erroring out"
-    running "trying to initialize it"
-    notify_and_exit_on_error "restic init" "Repo init failed"
-fi
+initMail
 
-ok
-
-running "restic backup"
-notify_and_exit_on_error "restic backup --verbose /app/data" "Restic backup failed"
-ok
-
-running "checking consistency of restic repository"
-notify_and_exit_on_error "restic check" "Restic check failed"
-ok
-
-running "removing outdated snapshots"
-notify_and_exit_on_error "restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --keep-yearly 3 --prune" "Restic forget failed"
-ok
+case "${1:-}" in
+    backup)    cmdBackup ;;
+    restore)   cmdRestore "${2:-}" ;;
+    snapshots) restic snapshots ;;
+    *)         echo "Usage: $0 {backup|restore <id>|snapshots}"; exit 1 ;;
+esac

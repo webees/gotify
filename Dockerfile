@@ -1,68 +1,54 @@
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║ Gotify on Fly.io                                                          ║
+# ║ https://github.com/webees/gotify                                          ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
 FROM ghcr.io/gotify/server:2.6
 
-WORKDIR /app
+# ── Build Args ────────────────────────────────────────────────────────────────
+ARG TARGETARCH
+ARG SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.37/supercronic-linux-${TARGETARCH}
+ARG OVERMIND_URL=https://github.com/DarthSim/overmind/releases/download/v2.5.1/overmind-v2.5.1-linux-${TARGETARCH}.gz
 
-ARG SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
-    OVERMIND_URL=https://github.com/DarthSim/overmind/releases/download/v2.4.0/overmind-v2.4.0-linux-amd64.gz
-
-ENV TZ="Asia/Shanghai" \
-
-    DOMAIN_NAME= \
-
-    OVERMIND_CAN_DIE=caddy,crontab \
+# ── Environment ───────────────────────────────────────────────────────────────
+ENV WORKDIR=/app \
+    TZ="Asia/Shanghai" \
     OVERMIND_PROCFILE=/Procfile \
-    OVERMIND_SHOW_TIMESTAMPS=0 \
+    OVERMIND_CAN_DIE=crontab
 
-    SMTP_HOST=smtp.gmail.com \
-    SMTP_PORT=587 \
-    SMTP_USERNAME=88888888@gmail.com \
-    SMTP_PASSWORD=88888888 \
-    SMTP_FROM=88888888@gmail.com \
-    SMTP_TO= \
+WORKDIR $WORKDIR
 
-    RESTIC_REPOSITORY=s3://88888888.r2.cloudflarestorage.com/gotify \
-    RESTIC_PASSWORD= \
-    AWS_ACCESS_KEY_ID= \
-    AWS_SECRET_ACCESS_KEY=
-
+# ── Config Files ──────────────────────────────────────────────────────────────
 COPY config/crontab \
-     config/Procfile \
-     config/Caddyfile \
-     scripts/restic.sh \
-     /
+    config/Procfile \
+    config/Caddyfile \
+    scripts/restic.sh \
+    /
 
-RUN apt update && apt install -y --no-install-recommends \
-        sudo \
-        debian-keyring \
-        debian-archive-keyring \
-        apt-transport-https \
-        gnupg \
-        curl \
+# ── Dependencies ──────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gnupg \
+    ca-certificates \
+    openssl \
+    tzdata \
+    ntpdate \
+    iptables \
+    iputils-ping \
+    tmux \
+    msmtp \
+    bsd-mailx \
+    && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+    | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
+    && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+    | tee /etc/apt/sources.list.d/caddy-stable.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    caddy \
+    restic \
+    && curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
+    && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
+    && ln -sf /usr/bin/msmtp /usr/bin/sendmail \
+    && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
+    && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh \
+    && rm -rf /var/lib/apt/lists/*
 
-        && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
-        && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list \
-
-    && apt update && apt install -y --no-install-recommends \
-        caddy \
-        restic \
-        ca-certificates \
-        openssl \
-        tzdata \
-        iptables \
-        iputils-ping \
-        tmux \
-        msmtp \
-        bsd-mailx \
-
-        && rm -rf /var/lib/apt/lists/* && apt -y autoremove  \
-        && curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
-        && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
-
-        && ln -sf /usr/bin/msmtp /usr/bin/sendmail \
-        && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
-
-        && chmod +x /usr/local/bin/supercronic \
-        && chmod +x /usr/local/bin/overmind \
-        && chmod +x /restic.sh
-
-ENTRYPOINT ["overmind", "start"]
+CMD ["overmind", "start"]
