@@ -38,7 +38,7 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
 # ── Step 3: Install packages ──────────────────────────────────────────────────
 RUN apt update && apt install -y --no-install-recommends \
     caddy restic \
-    openssl tzdata ntpdate \
+    openssl tzdata ntpsec-ntpdate \
     iptables iputils-ping tmux \
     msmtp bsd-mailx
 
