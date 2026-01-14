@@ -35,21 +35,19 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     && echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian bookworm main" \
     > /etc/apt/sources.list.d/caddy-stable.list
 
-# ── Step 3: Install caddy restic ──────────────────────────────────────────────
-RUN apt update && apt install -y --no-install-recommends caddy restic
-
-# ── Step 4: Install other packages ────────────────────────────────────────────
-RUN apt install -y --no-install-recommends \
+# ── Step 3: Install packages ──────────────────────────────────────────────────
+RUN apt update && apt install -y --no-install-recommends \
+    caddy restic \
     openssl tzdata ntpdate \
     iptables iputils-ping tmux \
     msmtp bsd-mailx
 
-# ── Step 5: Binary tools ──────────────────────────────────────────────────────
+# ── Step 4: Binary tools ──────────────────────────────────────────────────────
 RUN curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
     && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
     && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh
 
-# ── Step 6: Mail symlinks & cleanup ───────────────────────────────────────────
+# ── Step 5: Mail symlinks & cleanup ───────────────────────────────────────────
 RUN ln -sf /usr/bin/msmtp /usr/bin/sendmail \
     && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
     && apt -y autoremove \
