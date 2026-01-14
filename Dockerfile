@@ -25,30 +25,33 @@ COPY config/crontab \
     /
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    gnupg \
-    ca-certificates \
-    openssl \
-    tzdata \
-    ntpdate \
-    iptables \
-    iputils-ping \
-    tmux \
-    msmtp \
-    bsd-mailx \
+RUN set -eux \
+    # ─ APT prerequisites ─
+    && apt update \
+    && apt install -y --no-install-recommends \
+    apt-transport-https ca-certificates curl gnupg sudo \
+    debian-keyring debian-archive-keyring \
+    # ─ Caddy repository ─
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
     | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
     && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
     | tee /etc/apt/sources.list.d/caddy-stable.list \
-    && apt-get update && apt-get install -y --no-install-recommends \
-    caddy \
-    restic \
+    # ─ Install packages ─
+    && apt update \
+    && apt install -y --no-install-recommends \
+    caddy restic \
+    openssl tzdata ntpdate \
+    iptables iputils-ping tmux \
+    msmtp bsd-mailx \
+    # ─ Binary tools ─
     && curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
     && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
+    && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh \
+    # ─ Mail symlinks ─
     && ln -sf /usr/bin/msmtp /usr/bin/sendmail \
     && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
-    && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh \
+    # ─ Cleanup ─
+    && apt -y autoremove \
     && rm -rf /var/lib/apt/lists/*
 
 CMD ["overmind", "start"]
