@@ -2,7 +2,7 @@
 # ║ Gotify on Fly.io                                                          ║
 # ║ https://github.com/webees/gotify                                          ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-FROM ghcr.io/gotify/server:2.6
+FROM ghcr.io/gotify/server:2.8
 
 # ── Build Args ────────────────────────────────────────────────────────────────
 ARG TARGETARCH
