@@ -13,7 +13,8 @@ ARG OVERMIND_URL=https://github.com/DarthSim/overmind/releases/download/v2.5.1/o
 ENV WORKDIR=/app \
     TZ="Asia/Shanghai" \
     OVERMIND_PROCFILE=/Procfile \
-    OVERMIND_CAN_DIE=crontab
+    OVERMIND_CAN_DIE=crontab \
+    GOTIFY_SERVER_PORT=8080
 
 WORKDIR $WORKDIR
 
