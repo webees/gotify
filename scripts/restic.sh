@@ -1,7 +1,7 @@
 #!/bin/bash
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║ Restic Backup - Gotify                                                    ║
-# ║ Usage: /restic.sh {backup|restore <id>|snapshots}                         ║
+# ║ Restic Backup Script                                                      ║
+# ║ Usage: /restic.sh {backup|restore <id>|snapshots|mail-test}               ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 set -o pipefail
@@ -106,5 +106,6 @@ case "${1:-}" in
     backup)    cmdBackup ;;
     restore)   cmdRestore "${2:-}" ;;
     snapshots) restic snapshots ;;
-    *)         echo "Usage: $0 {backup|restore <id>|snapshots}"; exit 1 ;;
+    mail-test) echo "Test email from $APP_NAME" | command mail -s "[$APP_NAME] Mail Test" "$SMTP_TO" && echo "Mail sent to $SMTP_TO" ;;
+    *)         echo "Usage: $0 {backup|restore <id>|snapshots|mail-test}"; exit 1 ;;
 esac
