@@ -18,10 +18,8 @@
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
 	# Block requests not matching allowed domains (if CADDY_DOMAINS is set)
-	@blocked {
-		not host {$CADDY_DOMAINS:*}
-	}
-	respond @blocked "Forbidden" 403
+	@blocked not host {$CADDY_DOMAINS:*}
+	abort @blocked
 
 	encode zstd gzip
 
