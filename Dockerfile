@@ -42,6 +42,7 @@ RUN apt update && apt install -y --no-install-recommends \
     && apt update && apt install -y --no-install-recommends \
     caddy \
     restic \
+    sqlite3 \
     openssl \
     tzdata \
     ntpsec-ntpdate \
