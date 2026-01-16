@@ -1,5 +1,2 @@
-# NTP time sync
-@hourly ntpdate -s pool.ntp.org >/dev/null 2>&1
-
 # Restic backup
 @hourly /restic.sh backup
