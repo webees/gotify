@@ -16,7 +16,8 @@ ENV WORKDIR=/app \
     OVERMIND_CAN_DIE=crontab \
     # Gotify settings
     GOTIFY_SERVER_PORT=8080 \
-    GOTIFY_SERVER_TRUSTEDPROXIES=127.0.0.0/8,::1/128
+    # Standard YAML array format is required by Gotify's Viper config loader
+    GOTIFY_SERVER_TRUSTEDPROXIES='["127.0.0.1", "::1"]'
 
 WORKDIR $WORKDIR
 
