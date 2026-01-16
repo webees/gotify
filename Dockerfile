@@ -61,4 +61,6 @@ RUN apt update && apt install -y --no-install-recommends \
     && apt -y autoremove \
     && rm -rf /var/lib/apt/lists/*
 
+# Clear base image entrypoint
+ENTRYPOINT []
 CMD ["overmind", "start"]
