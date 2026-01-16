@@ -61,9 +61,8 @@
 
 		# Proxy to the application backend
 		reverse_proxy 127.0.0.1:8080 {
-			# Optimized IP Waterfall Logic: Cloudflare -> Fly.io -> Remote Host
-			header_up X-Real-IP {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
-			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
+			header_up X-Real-IP {http.request.header.Fly-Client-IP}
+			header_up X-Forwarded-For {http.request.header.Fly-Client-IP}
 		}
 	}
 }
