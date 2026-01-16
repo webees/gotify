@@ -17,11 +17,6 @@
 
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
-	# Handle health checks first
-	handle /health {
-		respond "OK" 200
-	}
-
 	# Block requests not matching allowed domains (if CADDY_DOMAINS is set)
 	@blocked {
 		not host {$CADDY_DOMAINS:*}
@@ -30,7 +25,7 @@
 		abort
 	}
 
-	# Main application handling
+	# Reverse proxy to application
 	handle {
 		encode zstd gzip
 
@@ -46,7 +41,6 @@
 			-Last-Modified
 		}
 
-		# Reverse proxy
 		reverse_proxy localhost:8080 {
 			header_up X-Real-IP {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
