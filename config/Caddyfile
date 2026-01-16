@@ -27,10 +27,9 @@
 	}
 
 	# Domain Access Control
-	# Block requests if CADDY_DOMAINS is set and host doesn't match
 	@outside_domain {
 		expression `{env.CADDY_DOMAINS} != ""`
-		not host {$CADDY_DOMAINS}
+		not host {$CADDY_DOMAINS:placeholder}
 	}
 	handle @outside_domain {
 		respond "Access Denied: Domain not allowed" 403
