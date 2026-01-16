@@ -7,7 +7,7 @@
 set -o pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-APP_NAME="Gotify"
+APP_NAME="${FLY_APP_NAME:-Gotify}"
 DATA="/app/data"
 LOG_DIR="/var/log/restic"
 LOG="$LOG_DIR/$(date +%Y%m%d_%H%M%S).log"
