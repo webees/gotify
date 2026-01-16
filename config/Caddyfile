@@ -17,13 +17,12 @@
 
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
-	# Block requests not matching allowed domains (if CADDY_DOMAINS is set)
+	# Block only if (NOT /health) AND (domain NOT in whitelist)
 	@blocked {
+		not path /health
 		not host {$CADDY_DOMAINS:*}
 	}
-	handle @blocked {
-		abort
-	}
+	abort @blocked
 
 	# Reverse proxy to application
 	handle {
