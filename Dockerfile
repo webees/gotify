@@ -25,7 +25,7 @@ COPY config/crontab \
     scripts/restic.sh \
     /
 
-# ── APT packages ──────────────────────────────────────────────────────────────
+# ── Dependencies ──────────────────────────────────────────────────────────────
 RUN apt update && apt install -y --no-install-recommends \
     apt-transport-https \
     ca-certificates \
@@ -50,16 +50,15 @@ RUN apt update && apt install -y --no-install-recommends \
     tmux \
     msmtp \
     bsd-mailx \
+    # Binary tools
+    && curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
+    && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
+    && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh \
     # Mail symlinks
     && ln -sf /usr/bin/msmtp /usr/bin/sendmail \
     && ln -sf /usr/bin/msmtp /usr/sbin/sendmail \
     # Cleanup
     && apt -y autoremove \
     && rm -rf /var/lib/apt/lists/*
-
-# ── Binary tools ──────────────────────────────────────────────────────────────
-RUN curl -fsSL "$SUPERCRONIC_URL" -o /usr/local/bin/supercronic \
-    && curl -fsSL "$OVERMIND_URL" | gunzip -c - > /usr/local/bin/overmind \
-    && chmod +x /usr/local/bin/supercronic /usr/local/bin/overmind /restic.sh
 
 CMD ["overmind", "start"]
