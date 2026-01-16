@@ -17,31 +17,39 @@
 
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
-	# Allow health check endpoint without domain restriction
-	@health path /health
-	reverse_proxy @health localhost:8080
-
-	# Block requests not matching allowed domains (if CADDY_DOMAINS is set)
-	@blocked not host {$CADDY_DOMAINS:*}
-	abort @blocked
-
-	encode zstd gzip
-
-	# Security headers
-	header / {
-		Strict-Transport-Security "max-age=31536000;"
-		X-XSS-Protection "1; mode=block"
-		X-Frame-Options "DENY"
-		X-Robots-Tag "noindex, nofollow"
-		X-Content-Type-Options "nosniff"
-		-Server
-		-X-Powered-By
-		-Last-Modified
+	# Handle health checks first
+	handle /health {
+		respond "OK" 200
 	}
 
-	# Reverse proxy
-	reverse_proxy localhost:8080 {
-		header_up X-Real-IP {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
-		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
+	# Block requests not matching allowed domains (if CADDY_DOMAINS is set)
+	@blocked {
+		not host {$CADDY_DOMAINS:*}
+	}
+	handle @blocked {
+		abort
+	}
+
+	# Main application handling
+	handle {
+		encode zstd gzip
+
+		# Security headers
+		header {
+			Strict-Transport-Security "max-age=31536000;"
+			X-XSS-Protection "1; mode=block"
+			X-Frame-Options "DENY"
+			X-Robots-Tag "noindex, nofollow"
+			X-Content-Type-Options "nosniff"
+			-Server
+			-X-Powered-By
+			-Last-Modified
+		}
+
+		# Reverse proxy
+		reverse_proxy localhost:8080 {
+			header_up X-Real-IP {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
+		}
 	}
 }
