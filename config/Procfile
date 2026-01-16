@@ -1,3 +1,8 @@
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║ Overmind Process Configuration                                            ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+# Application services
 gotify: cd /app && ./gotify-app
 caddy: caddy run --config /Caddyfile
 crontab: supercronic /crontab

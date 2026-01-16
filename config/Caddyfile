@@ -8,6 +8,7 @@
 	admin off
 	persist_config off
 
+	# Trust Fly.io private networking for accurate IP parsing
 	servers {
 		trusted_proxies static private_ranges
 	}
@@ -21,13 +22,13 @@
 
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
-	# Explicitly handle health checks
+	# Always allow health checks bypass for Fly.io monitoring
 	handle /health {
 		respond "OK" 200
 	}
 
-	# Domain Whitelist Enforcement
-	# If CADDY_DOMAINS is set, block everything else
+	# Domain Access Control
+	# Block requests if CADDY_DOMAINS is set and host doesn't match
 	@outside_domain {
 		expression `{env.CADDY_DOMAINS} != ""`
 		not host {$CADDY_DOMAINS}
@@ -36,23 +37,30 @@
 		respond "Access Denied: Domain not allowed" 403
 	}
 
-	# Main application handling
+	# Main Reverse Proxy Logic
 	handle {
 		encode zstd gzip
 
+		# Harden security posture
 		header {
+			# Infrastructure protection
 			Strict-Transport-Security "max-age=31536000;"
 			X-Content-Type-Options "nosniff"
 			X-Frame-Options "DENY"
 			X-XSS-Protection "1; mode=block"
+
+			# Privacy & Anti-tracking
 			Referrer-Policy "strict-origin-when-cross-origin"
 			Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 			X-Robots-Tag "noindex, nofollow"
+
+			# Hide sensitive headers
 			-Server
 			-X-Powered-By
 			-Last-Modified
 		}
 
+		# Proxy to the application backend
 		reverse_proxy localhost:8080 {
 			header_up X-Real-IP {http.request.header.Fly-Client-IP}
 			header_up X-Forwarded-For {http.request.header.Fly-Client-IP}
