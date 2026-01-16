@@ -17,6 +17,10 @@
 
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
+	# Allow health check endpoint without domain restriction
+	@health path /health
+	reverse_proxy @health localhost:8080
+
 	# Block requests not matching allowed domains (if CADDY_DOMAINS is set)
 	@blocked not host {$CADDY_DOMAINS:*}
 	abort @blocked
