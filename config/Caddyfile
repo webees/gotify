@@ -8,6 +8,11 @@
 	admin off
 	persist_config off
 
+	# Trust private network ranges for Fly.io
+	servers {
+		trusted_proxies static private_ranges
+	}
+
 	log {
 		level INFO
 		output stdout
@@ -30,19 +35,26 @@
 
 		# Security headers
 		header {
+			# Infrastructure security
 			Strict-Transport-Security "max-age=31536000;"
-			X-XSS-Protection "1; mode=block"
-			X-Frame-Options "DENY"
-			X-Robots-Tag "noindex, nofollow"
 			X-Content-Type-Options "nosniff"
+			X-Frame-Options "DENY"
+			X-XSS-Protection "1; mode=block"
+
+			# Privacy & Permissions
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+			X-Robots-Tag "noindex, nofollow"
+
+			# Fingerprint removal
 			-Server
 			-X-Powered-By
 			-Last-Modified
 		}
 
 		reverse_proxy localhost:8080 {
-			header_up X-Real-IP {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
-			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
+			header_up X-Real-IP {http.request.header.Fly-Client-IP:{remote_host}}
+			header_up X-Forwarded-For {http.request.header.Fly-Client-IP:{remote_host}}
 		}
 	}
 }
