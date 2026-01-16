@@ -21,12 +21,13 @@
 
 # ── Site Block ────────────────────────────────────────────────────────────────
 :80 {
-	# Always allow health checks bypass
+	# Always allow health checks bypass for Fly.io monitoring
 	handle /health {
 		respond "OK" 200
 	}
 
 	# Domain Access Control
+	# Block requests if CADDY_DOMAINS is set and host doesn't match
 	@outside_domain {
 		expression `{env.CADDY_DOMAINS} != ""`
 		not host {$CADDY_DOMAINS}
@@ -39,34 +40,30 @@
 	handle {
 		encode zstd gzip
 
+		# Harden security posture
 		header {
+			# Infrastructure protection
 			Strict-Transport-Security "max-age=31536000;"
 			X-Content-Type-Options "nosniff"
 			X-Frame-Options "DENY"
 			X-XSS-Protection "1; mode=block"
+
+			# Privacy & Anti-tracking
 			Referrer-Policy "strict-origin-when-cross-origin"
 			Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 			X-Robots-Tag "noindex, nofollow"
+
+			# Hide sensitive headers
 			-Server
 			-X-Powered-By
 			-Last-Modified
 		}
 
-		# Proxy and debug request headers
+		# Proxy to the application backend
 		reverse_proxy 127.0.0.1:8080 {
-			# Explicitly set headers
+			# Optimized IP Waterfall Logic: Cloudflare -> Fly.io -> Remote Host
 			header_up X-Real-IP {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP:{http.request.header.Fly-Client-IP:{remote_host}}}
-			
-			# Debug: print all relevant headers to Caddy stdout
-			# header_up X-Debug-Headers "{http.request.headers.*}"
 		}
-	}
-	
-	# Enable debug logging for headers
-	log {
-		output stdout
-		format console
-		# log HTTP request headers to debug mapping
 	}
 }
