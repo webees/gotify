@@ -1,8 +1,7 @@
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║ Fly.io Deployment                                                         ║
-# ║ https://github.com/webees/gotify                                          ║
+# ║ Gotify Deployment                                                         ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-FROM ghcr.io/gotify/server:2.8
+FROM ghcr.io/gotify/server:latest
 
 # ── Build Args ────────────────────────────────────────────────────────────────
 ARG TARGETARCH
@@ -14,7 +13,6 @@ ENV WORKDIR=/app \
     TZ="Asia/Shanghai" \
     OVERMIND_PROCFILE=/Procfile \
     OVERMIND_CAN_DIE=crontab \
-    # Gotify settings
     GOTIFY_SERVER_PORT=8080 \
     GOTIFY_SERVER_TRUSTEDPROXIES='["127.0.0.1"]'
 
@@ -63,6 +61,6 @@ RUN apt update && apt install -y --no-install-recommends \
     && apt -y autoremove \
     && rm -rf /var/lib/apt/lists/*
 
-# Clear base image entrypoint to allow Overmind to manage processes
+# ── Startup ───────────────────────────────────────────────────────────────────
 ENTRYPOINT []
 CMD ["overmind", "start"]

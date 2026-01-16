@@ -2,7 +2,7 @@
 
 [![Fly.io](https://img.shields.io/badge/Fly.io-Deploy-purple?style=for-the-badge&logo=flydotio)](https://fly.io)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue?style=for-the-badge&logo=docker)](https://ghcr.io/webees/gotify)
-[![Gotify](https://img.shields.io/badge/Gotify-v2.6-green?style=for-the-badge)](https://github.com/gotify/server)
+[![Gotify](https://img.shields.io/badge/Gotify-Latest-green?style=for-the-badge)](https://github.com/gotify/server)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 > Production-ready Gotify on Fly.io with Caddy reverse proxy, Overmind process manager, and automated Restic backups to Cloudflare R2.
@@ -12,11 +12,11 @@
 | Component | Description |
 | :--- | :--- |
 | **Gotify** | Self-hosted push notification server |
-| **Caddy** | Automatic HTTPS, security headers, Cloudflare IP forwarding |
-| **Overmind** | Tmux-based process manager (graceful restarts) |
-| **Supercronic** | Cron daemon for containers |
-| **Restic** | Encrypted incremental backups with retention policy |
-| **msmtp** | Email notifications on backup failures |
+| **Caddy** | Reverse proxy with security headers and IP forwarding |
+| **Overmind** | Process manager for robust service orchestration |
+| **Supercronic** | Cron daemon for automated tasks |
+| **Restic** | Encrypted incremental backups to S3/R2 |
+| **msmtp** | Email notifications for system alerts |
 
 ## 🏗️ Architecture
 
@@ -45,36 +45,41 @@
 
 ## 🚀 Quick Start
 
-### 1. Create App & Volume
+### 1. Initialize Application
 
 ```bash
+# Login to Fly.io
 fly auth login
+
+# Create application
 fly apps create gotify
+
+# Import secrets from .env
 cat .env | fly secrets import
+
+# Create storage volume
 fly volumes create app_data --region hkg --size 1
-fly deploy
-fly ssh console
 ```
 
-### 2. Configure Secrets
+### 2. Required Secrets Configuration
 
 ```bash
-# Required: Cloudflare R2 backup
-fly secrets set RESTIC_PASSWORD="your-password"
+# Domain configuration (Multiple domains: "a.com b.com")
+fly secrets set CADDY_DOMAINS="gotify.example.com"
+
+# Restic / S3 backup settings
+fly secrets set RESTIC_PASSWORD="your-secure-password"
 fly secrets set RESTIC_REPOSITORY="s3:your-account-id.r2.cloudflarestorage.com/gotify"
-fly secrets set AWS_ACCESS_KEY_ID="your-r2-access-key"
-fly secrets set AWS_SECRET_ACCESS_KEY="your-r2-secret-key"
+fly secrets set AWS_ACCESS_KEY_ID="your-r2-id"
+fly secrets set AWS_SECRET_ACCESS_KEY="your-r2-key"
 
-# Optional: Custom domains (default: :80)
-fly secrets set CADDY_DOMAINS="gotify.example.com:80"
-
-# Optional: Email notifications
+# SMTP notification settings
 fly secrets set SMTP_HOST="smtp.gmail.com"
 fly secrets set SMTP_PORT="587"
-fly secrets set SMTP_FROM="your@email.com"
-fly secrets set SMTP_TO="notify@email.com"
-fly secrets set SMTP_USERNAME="your@email.com"
-fly secrets set SMTP_PASSWORD="app-password"
+fly secrets set SMTP_FROM="sender@example.com"
+fly secrets set SMTP_TO="admin@example.com"
+fly secrets set SMTP_USERNAME="sender@example.com"
+fly secrets set SMTP_PASSWORD="app-specific-password"
 ```
 
 ### 3. Deploy
@@ -83,105 +88,46 @@ fly secrets set SMTP_PASSWORD="app-password"
 fly deploy
 ```
 
-## 🛠️ Management
+## 🛠️ Management & Operations
 
-### Fly CLI
-
-> Use `-a <app-name>` to specify app when not in project directory.
+### Deployment CLI
 
 ```bash
-# SSH into container
-fly ssh console
-fly ssh console -a gotify
-
-# View logs
-fly logs
-fly logs -a gotify
-
-# Deploy
-fly deploy
-fly deploy -a gotify
-
-# Manage secrets
-fly secrets list -a gotify
-fly secrets set KEY=value -a gotify
-
-# App status
-fly status -a gotify
-fly apps list
-
-# Scale & restart
-fly scale count 1 -a gotify
-fly apps restart gotify
+fly status                     # Check application status
+fly logs                       # View real-time logs
+fly ssh console                # Access container shell
+fly apps restart               # Restart all instances
 ```
 
-### Backup Commands (via SSH)
+### Backup Operations (via SSH)
 
 ```bash
 /restic.sh backup              # Run manual backup
 /restic.sh snapshots           # List all snapshots
-/restic.sh restore <id>        # Restore from snapshot
+/restic.sh restore <id>        # Restore from specific snapshot
+/restic.sh test                # Test email notifications
 ```
 
-### View Logs (via SSH)
+### Log Inspection
 
 ```bash
-cat /var/log/restic/*.log      # Backup logs
-tail -f /var/log/msmtp.log     # Email logs
+cat /var/log/restic/*.log      # Check backup logs
+tail -f /var/log/msmtp.log     # Monitor email logs
 ```
 
-## 📁 Configuration
+## 🔐 Security Headers
 
-| File | Purpose |
-| :--- | :--- |
-| `config/Caddyfile` | Reverse proxy, security headers |
-| `config/Procfile` | Process definitions for Overmind |
-| `config/crontab` | Backup schedule (default: hourly) |
-| `scripts/restic.sh` | Backup script with email alerts |
-
-## 🔒 Security
-
-- **HSTS**: Strict-Transport-Security enabled
-- **XSS Protection**: X-XSS-Protection header
-- **Clickjacking**: X-Frame-Options DENY
-- **MIME Sniffing**: X-Content-Type-Options nosniff
-- **No Indexing**: X-Robots-Tag noindex, nofollow
-- **Cloudflare**: CF-Connecting-IP forwarded as X-Real-IP
-
-## 📊 Backup Retention
-
-| Period | Kept |
-| :--- | :--- |
-| Daily | 7 |
-| Weekly | 4 |
-| Monthly | 3 |
-| Yearly | 3 |
-
-## 🔧 Environment Variables
-
-| Variable | Required | Description |
-| :--- | :--- | :--- |
-| `CADDY_DOMAINS` | ❌ | Caddy domains (default: `:80`) |
-| `RESTIC_PASSWORD` | ✅ | Encryption password for backups |
-| `RESTIC_REPOSITORY` | ✅ | R2 URL: `s3:<account-id>.r2.cloudflarestorage.com/<bucket>` |
-| `AWS_ACCESS_KEY_ID` | ✅ | Cloudflare R2 Access Key ID |
-| `AWS_SECRET_ACCESS_KEY` | ✅ | Cloudflare R2 Secret Access Key |
-| `SMTP_HOST` | ❌ | SMTP server for notifications |
-| `SMTP_PORT` | ❌ | SMTP port (default: 587) |
-| `SMTP_FROM` | ❌ | Sender email address |
-| `SMTP_TO` | ❌ | Recipient for backup alerts |
-| `SMTP_USERNAME` | ❌ | SMTP authentication user |
-| `SMTP_PASSWORD` | ❌ | SMTP authentication password |
-
-## 📚 References
-
-- [Gotify Documentation](https://gotify.net/docs/)
-- [Gotify GitHub](https://github.com/gotify/server)
+The Caddy configuration automatically applies the following security posture:
+- **HSTS**: `Strict-Transport-Security` (1 year)
+- **Clickjacking**: `X-Frame-Options DENY`
+- **MIME Sniffing**: `X-Content-Type-Options nosniff`
+- **XSS Protection**: `X-XSS-Protection 1; mode=block`
+- **Privacy**: `Referrer-Policy strict-origin-when-cross-origin`
+- **Indexing**: `X-Robots-Tag noindex, nofollow`
 
 ## 📝 License
 
-MIT
+Distributed under the [MIT License](LICENSE).
 
 ---
-
-Made with ❤️ for 🔔
+🚀 Optimized for Fly.io by **[WeBees](https://github.com/webees)**
