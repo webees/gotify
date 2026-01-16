@@ -16,8 +16,7 @@ ENV WORKDIR=/app \
     OVERMIND_CAN_DIE=crontab \
     # Gotify settings
     GOTIFY_SERVER_PORT=8080 \
-    # Trust Caddy proxy (localhost) to correctly parse X-Forwarded-For
-    GOTIFY_SERVER_TRUSTEDPROXIES='["127.0.0.1", "::1"]'
+    GOTIFY_SERVER_TRUSTEDPROXIES=127.0.0.1,::1
 
 WORKDIR $WORKDIR
 
